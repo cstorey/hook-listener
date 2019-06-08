@@ -3,7 +3,8 @@ Description=Github Webhook listener
 
 [Service]
 Environment=RUST_LOG=hook_listener=debug,actix_web=info,warn
-ExecStart=%h/bin/hook-listener --bind 127.0.0.1:5001 --pgsql postgres://cez@localhost/hook-listener
+EnvironmentFile=%h/.config/hook-listener/env
+ExecStart=%h/bin/hook-listener --bind 127.0.0.1:5001 --pgsql ${PG_URL}
 
 [Install]
 WantedBy=default.target
