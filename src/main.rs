@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use actix_web::{middleware, web, App, Error, HttpResponse, HttpServer};
 use failure::Fallible;
 use futures::{future::ok, Future};
@@ -18,21 +20,33 @@ struct Opt {
 
 /// async handler
 fn ingest(
-    (path, body, pool): (
+    (path, body, pool, req): (
         web::Path<String>,
         web::Json<serde_json::Value>,
         web::Data<r2d2::Pool<r2d2_postgres::PostgresConnectionManager>>,
+        web::HttpRequest,
     ),
 ) -> impl Future<Item = HttpResponse, Error = Error> {
     let path = path.into_inner();
     let body = body.into_inner();
+    let headers = req
+        .headers()
+        .into_iter()
+        .map(|(k, v)| {
+            (
+                k.as_str().to_string(),
+                String::from_utf8_lossy(v.as_bytes()).into_owned(),
+            )
+        })
+        .collect::<BTreeMap<String, String>>();
     ok(())
         .and_then(|()| {
             web::block(move || -> Fallible<()> {
+                debug!("H: {:?}", headers);
                 let mut producer = Producer::new(pool.get_ref().clone())?;
                 let content = serde_json::to_vec(&body)?;
                 let ver = producer.produce(path.as_bytes(), &content)?;
-                debug!("Path: {} → {:?}", path, ver);
+                info!("Path: {} → {:?}", path, ver);
                 Ok(())
             })
             .map_err(|e: actix_threadpool::BlockingError<_>| e.into())
