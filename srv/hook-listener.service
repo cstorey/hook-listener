@@ -1,0 +1,10 @@
+[Unit]
+Description=Github Webhook listener
+
+[Service]
+Environment=RUST_LOG=hook_listener=debug,actix_web=info,warn
+ExecStart=%h/bin/hook-listener --bind 127.0.0.1:5001
+
+[Install]
+WantedBy=default.target
+
