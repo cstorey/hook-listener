@@ -1,9 +1,15 @@
-use actix_web;
-use log::*;
-
 use actix_web::{middleware, web, App, Error, HttpResponse, HttpServer};
 use failure::Fallible;
 use futures::{future::ok, Future};
+use log::*;
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+#[structopt(name = "hook-listener", about = "JSON webhook listener")]
+struct Opt {
+    #[structopt(short = "b", long = "bind")]
+    bind: std::net::SocketAddr,
+}
 
 /// async handler
 fn ingest(
@@ -25,18 +31,21 @@ fn ingest(
 
 fn main() -> Fallible<()> {
     env_logger::init();
+    let opt = Opt::from_args();
+
     let sys = actix_rt::System::new("basic-example");
-    HttpServer::new(|| {
+    let serv = HttpServer::new(|| {
         App::new()
             // enable logger - always register actix-web Logger middleware last
             .wrap(middleware::Logger::default())
             // with path parameters
             .service(web::resource("/gh/{path:.*}").route(web::post().to_async(ingest)))
     })
-    .bind("127.0.0.1:8080")?
-    .start();
+    .bind(&opt.bind)?;
 
-    info!("Starting http server: 127.0.0.1:8080");
+    info!("Starting http server: {:?}", serv.addrs());
+    serv.start();
+
     sys.run()?;
     Ok(())
 }
