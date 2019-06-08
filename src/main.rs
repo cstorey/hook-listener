@@ -18,11 +18,7 @@ fn ingest(
     let path = path.into_inner();
     let body = body.into_inner();
     ok(()).and_then(move |()| {
-        info!(
-            "Path: {}; body: {}",
-            path,
-            serde_json::to_string_pretty(&body)?
-        );
+        info!("Path: {}; body: {}", path, serde_json::to_string(&body)?);
         Ok(HttpResponse::Ok()
             .content_type("text/plain")
             .body(format!("Hello {:?}!\n", path)))
