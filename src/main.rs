@@ -12,6 +12,9 @@ use r2d2_postgres::{PostgresConnectionManager, TlsMode};
 use ring::hmac;
 use structopt::StructOpt;
 
+git_build_version::git_version!(VERSION);
+const CARGO_PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
+
 #[derive(Debug, StructOpt)]
 #[structopt(name = "hook-listener", about = "JSON webhook listener")]
 struct Opt {
@@ -151,7 +154,12 @@ fn main() -> Fallible<()> {
     })
     .bind(&opt.bind)?;
 
-    info!("Starting http server: {:?}", serv.addrs());
+    info!(
+        "Starting {} {}: {:?}",
+        CARGO_PKG_NAME,
+        VERSION,
+        serv.addrs()
+    );
     serv.start();
 
     sys.run()?;
