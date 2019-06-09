@@ -29,20 +29,21 @@ fn ingest(
 ) -> impl Future<Item = HttpResponse, Error = Error> {
     let path = path.into_inner();
     let body = body.into_inner();
-    let headers = req
-        .headers()
-        .into_iter()
-        .map(|(k, v)| {
-            (
-                k.as_str().to_string(),
-                String::from_utf8_lossy(v.as_bytes()).into_owned(),
-            )
-        })
-        .collect::<BTreeMap<String, String>>();
+    debug!(
+        "H: {:?}",
+        req.headers()
+            .into_iter()
+            .map(|(k, v)| {
+                (
+                    k.as_str().to_string(),
+                    String::from_utf8_lossy(v.as_bytes()).into_owned(),
+                )
+            })
+            .collect::<BTreeMap<String, String>>()
+    );
     ok(())
         .and_then(|()| {
             web::block(move || -> Fallible<()> {
-                debug!("H: {:?}", headers);
                 let mut producer = Producer::new(pool.get_ref().clone())?;
                 let content = serde_json::to_vec(&body)?;
                 let ver = producer.produce(path.as_bytes(), &content)?;
