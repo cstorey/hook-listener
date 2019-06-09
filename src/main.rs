@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 
 use actix_web::{middleware, web, App, Error, HttpResponse, HttpServer};
 use failure::Fallible;
-use futures::{future::ok, Future};
+use futures::stream::Stream;
+use futures::Future;
 use log::*;
 use pg_queue::Producer;
 use r2d2::Pool;
@@ -22,13 +23,12 @@ struct Opt {
 fn ingest(
     (path, body, pool, req): (
         web::Path<String>,
-        web::Json<serde_json::Value>,
+        web::Payload,
         web::Data<r2d2::Pool<r2d2_postgres::PostgresConnectionManager>>,
         web::HttpRequest,
     ),
 ) -> impl Future<Item = HttpResponse, Error = Error> {
     let path = path.into_inner();
-    let body = body.into_inner();
     debug!(
         "H: {:?}",
         req.headers()
@@ -41,8 +41,16 @@ fn ingest(
             })
             .collect::<BTreeMap<String, String>>()
     );
-    ok(())
-        .and_then(|()| {
+    body.map_err(Error::from)
+        .fold(web::BytesMut::new(), move |mut body, chunk| {
+            body.extend_from_slice(&chunk);
+            Ok::<_, Error>(body)
+        })
+        .and_then(|bytes| {
+            let json = serde_json::from_slice::<serde_json::Value>(&bytes)?;
+            Ok(json)
+        })
+        .and_then(|body| {
             web::block(move || -> Fallible<()> {
                 let mut producer = Producer::new(pool.get_ref().clone())?;
                 let content = serde_json::to_vec(&body)?;
