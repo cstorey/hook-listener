@@ -103,7 +103,6 @@ fn ingest(
                 .headers()
                 .get("x-hub-signature")
                 .ok_or_else(|| error::ErrorBadRequest("missing x-hub-signature"))?;
-            debug!("x-hub-signature: {:?}", sig);
             verifier.check(&bytes, sig)?;
             Ok(bytes)
         })
