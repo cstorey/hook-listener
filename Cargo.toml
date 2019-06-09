@@ -19,4 +19,5 @@ r2d2 = "0.8.5"
 r2d2_postgres = "0.14.0"
 ring = "0.14.6"
 hex = "0.3.2"
+hex-slice = { git = "https://github.com/cstorey/hex-slice.git" }
 git-build-version = { git = "https://github.com/cstorey/git-build-version.git" }

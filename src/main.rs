@@ -5,6 +5,7 @@ use failure::Fallible;
 use futures::stream::Stream;
 use futures::Future;
 use hex::FromHex;
+use hex_slice::AsHex;
 use log::*;
 use pg_queue::Producer;
 use r2d2::Pool;
@@ -37,10 +38,6 @@ impl Verifier {
         let algo_name = it
             .next()
             .ok_or_else(|| error::ErrorBadRequest("No algorithm found"))?;
-        debug!(
-            "hub signature algorithm: {:?}",
-            String::from_utf8_lossy(&algo_name)
-        );
         let sig = it
             .next()
             .ok_or_else(|| error::ErrorBadRequest("No signature found"))
@@ -48,7 +45,11 @@ impl Verifier {
                 Vec::from_hex(s)
                     .map_err(|e| error::ErrorBadRequest(format!("Parsing signature: {}", e)))
             })?;
-        debug!("hub signature value: {:?}", String::from_utf8_lossy(&sig));
+        trace!(
+            "hub signature algo:{:?}; value: {:x}",
+            String::from_utf8_lossy(&algo_name),
+            sig.as_hex()
+        );
         if it.next().is_some() {
             return Err(error::ErrorBadRequest("More than one '='"));
         }
