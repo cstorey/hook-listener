@@ -110,14 +110,9 @@ fn ingest(
             verifier.check(&bytes, sig)?;
             Ok(bytes)
         })
-        .and_then(|bytes| {
-            let json = serde_json::from_slice::<serde_json::Value>(&bytes)?;
-            Ok(json)
-        })
-        .and_then(|body| {
+        .and_then(|content| {
             web::block(move || -> Fallible<()> {
                 let mut producer = Producer::new(pool.get_ref().clone())?;
-                let content = serde_json::to_vec(&body)?;
                 let ver = producer.produce(path.as_bytes(), &content)?;
                 info!("Path: {} → {:?}", path, ver);
                 Ok(())
