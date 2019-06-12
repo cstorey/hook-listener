@@ -103,18 +103,23 @@ fn ingest(
             Ok::<_, Error>(body)
         })
         .and_then(move |bytes| {
-            let sig = req
-                .headers()
+            let headers = req.headers();
+            let sig = headers
                 .get("x-hub-signature")
                 .ok_or_else(|| error::ErrorBadRequest("missing x-hub-signature"))?;
             verifier.check(&bytes, sig)?;
-            Ok(bytes)
+            let event = headers
+                .get("x-github-event")
+                .map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned())
+                .unwrap_or_else(|| "unknown".to_string());
+            Ok((bytes, event))
         })
-        .and_then(|content| {
+        .and_then(|(content, event)| {
             web::block(move || -> Fallible<()> {
                 let mut producer = Producer::new(pool.get_ref().clone())?;
-                let ver = producer.produce(path.as_bytes(), &content)?;
-                info!("Path: {} → {:?}", path, ver);
+                let key = format!("{}/{}", path, event);
+                let ver = producer.produce(key.as_bytes(), &content)?;
+                debug!("K: {} → {:?}", key, ver);
                 Ok(())
             })
             .map_err(|e: actix_threadpool::BlockingError<_>| e.into())
